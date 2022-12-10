@@ -1,13 +1,14 @@
 from typing import Union
 
-from .Take import Take
-from .cell import Cell as cl
-from .color import Color as C
-from .coord import Coord
-from .move import Move
-from .move_direction import MoveDirection
-from .take_direction import TakeDirection
-from .figures import *
+from logic.Take import Take
+from logic.board import InvalidActionException
+from logic.cell import Cell as cl
+from logic.color import Color as C
+from logic.coord import Coord
+from logic.move import Move
+from logic.move_direction import MoveDirection
+from logic.take_direction import TakeDirection
+from logic.figures import *
 
 UC_WHITE = 0
 UC_BLACK = 1
@@ -42,7 +43,10 @@ class Board:
         cl.K_BLACK: ' B ',
     }
 
-    def __init__(self, user_color = 'white'):
+
+
+
+    def __init__(self, user_color='white'):
         self.user_color = UC_WHITE if user_color == 'white' else UC_BLACK
         # start placement
         # Белые внизу !
@@ -83,7 +87,6 @@ class Board:
             return takes
         else:
             return self.moves_variants(color)
-
 
     def is_color(self, coord: Coord, color: C):
         f = self.get(coord)
@@ -136,8 +139,6 @@ class Board:
             raise ValueError
         self.set(move.from_, self.get(move.to))
         self.set(move.to, Empty)
-
-
 
     def get_chains(self, take: Take) -> list[list[Take]]:
         self.take(take)
@@ -203,7 +204,7 @@ class Board:
         Совершает ход - перемещение или взятие по координатам, если это возможно. Иначе ValueError.
         """
         if len(move) < 2:
-            raise ValueError
+            raise InvalidActionException
         start = self.get(move[0])
         if isinstance(start, Checker):
             for direction in start.directions_moves:
@@ -217,11 +218,11 @@ class Board:
                         moves.append(self.apply(Take(start, move[i-1], move[i])))
                         break
                 else:
-                    raise ValueError
+                    raise InvalidActionException
                 return moves
         elif isinstance(start, Queen):
             if on_one_diagonal(from_, to):
-                if self.is_diagonal_empty(from_, to):
+                if self._is_diagonal_empty(from_, to):
                     self.apply(Move(self.get(from_), from_, to))
                     return
                 elif self.count_on_diagonal(opposites(self.get(from_)), from_, to) == 1 and \
@@ -229,9 +230,9 @@ class Board:
                     self.apply(Take(self.get(from_), from_, to))
                     return
         else:
-            raise ValueError
+            raise InvalidActionException
 
-    def is_diagonal_empty(self, from_: Coord, to: Coord):
+    def _is_diagonal_empty(self, from_: Coord, to: Coord):
         for r, c in zip(range(min(from_.r, to.r), max(from_.r, to.r)), range(min(from_.c, to.c), max(from_.c, to.c))):
             if self.get(Coord(r, c)) != cl.EMPTY:
                 return False

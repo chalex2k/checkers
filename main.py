@@ -50,13 +50,14 @@ class Interface:
         else:
             self.move.append(c)
             if not self.ctrl_is_pressing:
-                self.board.action(self.move)
+                # self.board.action(self.move)
+                print(self.move)
                 self.move.clear()
                 self.draw_board()
                 sleep(0.5)
-                self.algo.computer(self.board)
+                print('computer moved')
+                # self.algo.computer(self.board)
                 self.draw_board()
-        print(self.move)
 
     def init_board_labels(self):
         for row in range(BOARD_SIZE):
