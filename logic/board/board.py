@@ -1,6 +1,7 @@
+from copy import deepcopy
 from typing import Union
 
-from logic.Take import Take
+from logic.Jump import Jump, Take
 from logic.board import InvalidActionException
 from logic.cell import Cell as cl
 from logic.color import Color as C
@@ -43,26 +44,83 @@ class Board:
         cl.K_BLACK: ' B ',
     }
 
-
-
-
     def __init__(self, user_color='white'):
         self.user_color = UC_WHITE if user_color == 'white' else UC_BLACK
         # start placement
         # Белые внизу !
         self.field: list[list[Figure]] = [
-            [Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK)],
-            [Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty()],
-            [Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK)],
+            [Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty(),
+             Checker(C.BLACK)],
+            [Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK),
+             Empty()],
+            [Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty(), Checker(C.BLACK), Empty(),
+             Checker(C.BLACK)],
             [Empty(), Empty(), Empty(), Empty(), Empty(), Empty(), Empty(), Empty()],
             [Empty(), Empty(), Empty(), Empty(), Empty(), Empty(), Empty(), Empty()],
-            [Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty()],
-            [Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE)],
-            [Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty()],
+            [Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE),
+             Empty()],
+            [Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty(),
+             Checker(C.WHITE)],
+            [Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE), Empty(), Checker(C.WHITE),
+             Empty()],
         ]
+        self.history: list[Union[Move, Jump]] = []
+
+    def action(self, path: list[Coord]):
+        """
+        Совершает ход - перемещение или взятие по координатам, если это возможно. Иначе InvalidActionException.
+        """
+        if len(path) < 2:
+            raise InvalidActionException
+        start = self.get(path[0])
+        if isinstance(start, Checker):
+            for direction in start.directions_moves:
+                if path[1] == direction.apply(path[0]):
+                    if len(path) == 2:
+                        self.apply(Move(start, path[0], path[1]))
+                        return
+            jumps = []
+            for i in range(1, len(path)):
+                for direction in start.directions_takes:
+                    if path[i] == direction.apply(path[i - 1]):
+                        jumps.append(Jump(path[i - 1], path[i]))
+                        break
+                else:
+                    raise InvalidActionException
+            self.apply(Take(start, jumps, deepcopy(self.field)))
+            return
+        elif isinstance(start, Queen):
+            if on_one_diagonal(from_, to):
+                if self._is_diagonal_empty(from_, to):
+                    self.apply(Move(self.get(from_), from_, to))
+                    return
+                elif self.count_on_diagonal(opposites(self.get(from_)), from_, to) == 1 and \
+                        self.count_on_diagonal(sames(self.get(from_)), from_, to) == 0:
+                    self.apply(Jump(self.get(from_), from_, to))
+                    return
+        raise InvalidActionException
+
+    def apply(self, x: Union[Move, Take]):
+        if isinstance(x, Move):
+            self.apply_move(x)
+            self.history.append(x)
+            return
+        elif isinstance(x, Take):
+            self.take(x)
+            self.history.append(x)
+            return
+        raise ValueError
+
+    def undo(self):
+        x = self.history.pop()
+        if isinstance(x, Move):
+            return self.undo_move(x)
+        elif isinstance(x, Take):
+            return self.undo_take(x)
+        raise ValueError
 
     def __str__(self):
-        numbers = '   '+' | '.join(str(i) for i in range(8))
+        numbers = '   ' + ' | '.join(str(i) for i in range(8))
         horisontal = ' ├---' + '┼---' * 6 + '┼---┤'
         lines: list[str] = [numbers, horisontal]
         nrow = 0
@@ -114,22 +172,9 @@ class Board:
                     moves.append(candidate)
         return moves
 
-    def apply(self, x: Union[Move, Take]):
-        if isinstance(x, Move):
-            return self.apply_move(x)
-        elif isinstance(x, Take):
-            return self.take(x)
-        raise ValueError
-
-    def undo(self, x: Union[Move, Take]):
-        if isinstance(x, Move):
-            return self.undo_move(x)
-        elif isinstance(x, Take):
-            return self.undo_take(x)
-        raise ValueError
-
     def apply_move(self, move: Move):
-        if not isinstance(self.get(move.from_), Figure) or not isinstance(self.get(move.to), Empty):
+        if not isinstance(self.get(move.from_), Figure) \
+                or not isinstance(self.get(move.to), Empty):
             raise ValueError
         self.set(move.to, self.get(move.from_))
         self.set(move.from_, Empty())
@@ -138,50 +183,55 @@ class Board:
         if not (self.get(move.to) == move.checker and isinstance(self.get(move.from_), Empty)):
             raise ValueError
         self.set(move.from_, self.get(move.to))
-        self.set(move.to, Empty)
+        self.set(move.to, Empty())
 
-    def get_chains(self, take: Take) -> list[list[Take]]:
+    def get_chains(self, take: Jump) -> list[list[Jump]]:
         self.take(take)
 
     def check_take(self, r, c):
         pass
 
-    def takes_variants(self, color = Color.BLACK):
-        take_chains = []
+    def takes_variants(self, color=Color.BLACK):
+        takes = []
+        before = deepcopy(self.field)
         for coord, f in self.foreach(color):
             for direction in f.directions_takes:
                 coord1 = direction.apply(coord)
-                candidate1 = Take(f, coord, coord1)
-                if self._is_empty(direction.apply(coord)) and self.is_color(direction.taken(coord), self.opposite(color)):
+                candidate1 = Jump(coord, coord1)
+                if self._is_empty(direction.apply(coord)) and self.is_color(direction.taken(coord),
+                                                                            self.opposite(color)):
                     flg = False
                     for direction2 in f.directions_takes:
                         if direction + direction2 == 0:
                             continue
-                        candidate2 = Take(f, coord1, direction.apply(coord1))
-                        if self._is_empty(direction.apply(coord1)) and self.is_color(direction.taken(coord1), self.opposite(color)):
-                            take_chains.append(
-                                [candidate1, candidate2]
+                        candidate2 = Jump(coord1, direction.apply(coord1))
+                        if self._is_empty(direction.apply(coord1)) and self.is_color(direction.taken(coord1),
+                                                                                     self.opposite(color)):
+                            takes.append(
+                                Take(f, [candidate1, candidate2], before)
                             )
                             flg = True
                     if not flg:
-                        take_chains.append([candidate1])
-        return take_chains
+                        takes.append(Take(f, [candidate1], before))
+        return takes
 
     def take(self, t: Take):
-        if not (self.get(t.from_) == t.checker and self.get(t.to) == cl.EMPTY and self.get(t.taken_coord) == self.opposite(t.checker)):
-            raise ValueError
+        # if not (self.get(t.from_) == t.checker and self.get(t.to) == cl.EMPTY and self.get(
+        #         t.taken_coord) == self.opposite(t.checker)):
+        #     raise ValueError
         # TODO Если это дамка, то нужно запоминать где стояла
         # Нужно запоминать кто тут стоял was_taken
-        self.set(t.to, self.get(t.from_))
-        self.set(t.from_, cl.EMPTY)
-        self.set(t.taken_coord, cl.EMPTY)
+        for j in t.jumps:
+            self.set(j.to, self.get(j.from_))
+            self.set(j.from_, Empty())
+            self.set(j.taken_coord, Empty())
 
     def undo_take(self, t: Take):
         # todo check
-        self.set(t.from_, self.get(t.to))
-        self.set(t.to, cl.EMPTY)
-        self.set(t.taken_coord, self.opposite(t.checker))
-
+        # self.set(t.from_, self.get(t.to))
+        # self.set(t.to, cl.EMPTY)
+        # self.set(t.taken_coord, self.opposite(t.checker))
+        self.field = t.field_before
 
     def count(self, color: Color):
         cnt = 0
@@ -199,39 +249,6 @@ class Board:
             return Color.WHITE
         raise ValueError
 
-    def action(self, move: list[Coord]):
-        """
-        Совершает ход - перемещение или взятие по координатам, если это возможно. Иначе ValueError.
-        """
-        if len(move) < 2:
-            raise InvalidActionException
-        start = self.get(move[0])
-        if isinstance(start, Checker):
-            for direction in start.directions_moves:
-                if move[1] == direction.apply(move[0]):
-                    if len(move) == 2:
-                        return self.apply(Move(start, move[0], move[1]))
-            for i in range(1, len(move)):
-                moves = []
-                for direction in start.directions_takes:
-                    if move[i] == direction.apply(move[i-1]):
-                        moves.append(self.apply(Take(start, move[i-1], move[i])))
-                        break
-                else:
-                    raise InvalidActionException
-                return moves
-        elif isinstance(start, Queen):
-            if on_one_diagonal(from_, to):
-                if self._is_diagonal_empty(from_, to):
-                    self.apply(Move(self.get(from_), from_, to))
-                    return
-                elif self.count_on_diagonal(opposites(self.get(from_)), from_, to) == 1 and \
-                        self.count_on_diagonal(sames(self.get(from_)), from_, to) == 0:
-                    self.apply(Take(self.get(from_), from_, to))
-                    return
-        else:
-            raise InvalidActionException
-
     def _is_diagonal_empty(self, from_: Coord, to: Coord):
         for r, c in zip(range(min(from_.r, to.r), max(from_.r, to.r)), range(min(from_.c, to.c), max(from_.c, to.c))):
             if self.get(Coord(r, c)) != cl.EMPTY:
@@ -244,8 +261,6 @@ class Board:
             if self.get(Coord(r, c)) in types:
                 cnt += 1
         return cnt
-
-
 
     def allow_user_move(self, c: Coord):
         if self.user_color == UC_WHITE:

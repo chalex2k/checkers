@@ -1,7 +1,7 @@
 import random
 from pprint import pprint
 
-from Take import Take
+from Jump import Jump
 from board import Board
 from cell import Cell
 from coord import Coord

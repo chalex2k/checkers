@@ -8,6 +8,7 @@ from logic.take_direction import TakeDirection
 class Figure:
     pass
 
+
 @dataclass
 class Checker(Figure):
     color: Color
@@ -27,7 +28,6 @@ class Checker(Figure):
     @property
     def directions_takes(self):
         return self._checkers_directions_takes
-
 
 
 @dataclass
