@@ -3,7 +3,7 @@ from time import sleep
 
 from PyQt6.QtWidgets import QMessageBox
 
-from first import *
+from qt_designer_form import *
 from functools import partial
 from logic.algorithm import Algorithm, AlgorithmAlfaBeta
 from logic.board import Board
@@ -139,7 +139,7 @@ if __name__ == "__main__":
 # from PyQt6 import uic
 # from PyQt6.QtWidgets import QApplication
 #
-# Form, Window = uic.loadUiType("first.ui")
+# Form, Window = uic.loadUiType("QtDesignerForm.ui")
 #
 # app = QApplication([])
 # window = Window()
