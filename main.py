@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QMessageBox
 
 from first import *
 from functools import partial
-from logic.algorithm import Algorithm
+from logic.algorithm import Algorithm, AlgorithmAlfaBeta
 from logic.board import Board
 from logic.evaluate_functions import evaluate
 from logic.exceptions import ComputerLostException
@@ -127,6 +127,7 @@ class Interface:
         elif self.ui.comboBoxAlgo.currentIndex() == 5:
             depth = 6
         print(depth)
+        # self.algorithm = AlgorithmAlfaBeta(depth, evaluate)
         self.algorithm = Algorithm(depth, evaluate)
         self.ui.plainTextEditLog.clear()
         self.draw_board()
