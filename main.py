@@ -5,20 +5,18 @@ from PyQt6.QtWidgets import QMessageBox
 
 from first import *
 from functools import partial
-
-from logic.algo import Algorithm
-from logic.board import Board, InvaidActionException
-from logic.color import Color
+from logic.algorithm import Algorithm
+from logic.board import Board
+from logic.evaluate_functions import evaluate
+from logic.exceptions import ComputerLostException
 from logic.coord import Coord
-from logic.cell import Cell as cl
-from logic.figures import Checker, Queen
 
 BOARD_SIZE = 8
 
 
 class Interface:
     def __init__(self):
-        self.algo = Algorithm(3)
+        self.algorithm = Algorithm(1, evaluate)
         self.board = Board()
         self.move = []
         self.ctrl_is_pressing = False
@@ -36,23 +34,21 @@ class Interface:
 
         self.init_board_labels()
         self.draw_board()
-        self.ui.pushButton.mousePressEvent = self.press_button
+        self.ui.pushButton.mousePressEvent = self.press_button_cancel
+        self.ui.pushButtonStart.mousePressEvent = self.press_button_start
         self.ui.centralwidget.keyPressEvent = self.on_key_press
         self.ui.centralwidget.keyReleaseEvent = self.on_key_release
-
 
         self.MainWindow.show()
         sys.exit(app.exec())
 
     def on_key_press(self, event):
         if event.key() == QtCore.Qt.Key.Key_Control.value:
-            print("PRESS CTRL")
             self.ctrl_is_pressing = True
         event.accept()
 
     def on_key_release(self, event):
         if event.key() == QtCore.Qt.Key.Key_Control.value:
-            print("RELEASE CTRL")
             self.ctrl_is_pressing = False
         event.accept()
 
@@ -67,16 +63,22 @@ class Interface:
                     self.board.action(self.move)
                     print(self.move)
                 except Exception as e:
-
                     dialog = QMessageBox(parent=self.MainWindow, text=str(e))
+                    print(e)
                     dialog.setWindowTitle("Message Dialog")
                     ret = dialog.exec()  # Stores the return value for the button pressed
-                    raise e
+                    # raise e
                 else:
                     self.draw_board()
                     sleep(0.5)
                     print('computer moved')
-                    self.algo.computer(self.board)
+                    try:
+                        self.algorithm.calculate_step(self.board)
+                    except ComputerLostException as e:
+                        dialog = QMessageBox(parent=self.MainWindow, text="Белые победили")
+                        dialog.setWindowTitle("Конец игры")
+                        ret = dialog.exec()  # Stores the return value for the button pressed
+                    self.ui.plainTextEditLog.appendPlainText('\n' + '-'.join(self.algorithm.log))
                 finally:
                     self.move.clear()
                     self.draw_board()
@@ -93,22 +95,40 @@ class Interface:
             for c in range(BOARD_SIZE):
                 label: QtWidgets.QLabel = self.ui.gridLayoutBoard.itemAtPosition(r, c).widget()
                 pixmap = self.pixmap_black if (r + c) % 2 else self.pixmap_white
-                if isinstance(self.board.field[r][c], Checker):
-                    if self.board.field[r][c].color == Color.WHITE:
+                if self.board.field[r][c].is_checker:
+                    if self.board.field[r][c].is_white:
                         pixmap = self.pixmap_white_checker
                     else:
                         pixmap = self.pixmap_black_checker
-                elif isinstance(self.board.field[r][c], Queen):
-                    if self.board.field[r][c].color == Color.WHITE:
+                elif self.board.field[r][c].is_queen:
+                    if self.board.field[r][c].is_white:
                         pixmap = self.pixmap_white_queen
                     else:
                         pixmap = self.pixmap_black_queen
                 label.setPixmap(pixmap)
 
-    def press_button(self, *args, **kwargs):
-        print('press button', args, kwargs)
+    def press_button_cancel(self, *args, **kwargs):
         self.board.undo()
         self.board.undo()
+        self.draw_board()
+
+    def press_button_start(self, *args, **kwargs):
+        self.board = Board()
+        self.move.clear()
+        depth = 1
+        if self.ui.comboBoxAlgo.currentIndex() == 1:
+            depth = 2
+        elif self.ui.comboBoxAlgo.currentIndex() == 2:
+            depth = 3
+        elif self.ui.comboBoxAlgo.currentIndex() == 3:
+            depth = 4
+        elif self.ui.comboBoxAlgo.currentIndex() == 4:
+            depth = 5
+        elif self.ui.comboBoxAlgo.currentIndex() == 6:
+            depth = 6
+        print(depth)
+        self.algorithm = Algorithm(depth, evaluate)
+        self.ui.plainTextEditLog.clear()
         self.draw_board()
 
 

@@ -27,6 +27,19 @@
      <item>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
         <layout class="QGridLayout" name="gridLayoutBoard"/>
        </item>
       </layout>
@@ -41,7 +54,38 @@
         </widget>
        </item>
        <item>
-        <widget class="QComboBox" name="comboBoxAlgo"/>
+        <widget class="QComboBox" name="comboBoxAlgo">
+         <item>
+          <property name="text">
+           <string>Минимакс глубина 1</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Минимакс глубина 2</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Минимакс глубина 3</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Минимакс глубина 4</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Минимакс глубина 5</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Минимакс глубина 6</string>
+          </property>
+         </item>
+        </widget>
        </item>
        <item>
         <widget class="QPushButton" name="pushButtonStart">
@@ -51,22 +95,16 @@
         </widget>
        </item>
        <item>
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
+        <widget class="QPlainTextEdit" name="plainTextEditLog">
+         <property name="plainText">
+          <string>Для множественного взятия держите Ctrl для промежуточных шагов</string>
          </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
+        </widget>
        </item>
        <item>
         <widget class="QPushButton" name="pushButton">
          <property name="text">
-          <string>PushButton</string>
+          <string>Отменить ход</string>
          </property>
         </widget>
        </item>
