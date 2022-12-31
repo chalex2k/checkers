@@ -124,7 +124,7 @@ class Interface:
             depth = 4
         elif self.ui.comboBoxAlgo.currentIndex() == 4:
             depth = 5
-        elif self.ui.comboBoxAlgo.currentIndex() == 6:
+        elif self.ui.comboBoxAlgo.currentIndex() == 5:
             depth = 6
         print(depth)
         self.algorithm = Algorithm(depth, evaluate)
